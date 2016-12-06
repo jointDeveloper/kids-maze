@@ -1,8 +1,6 @@
 /*
   Order: right, up, left, down
 */
-const dx = [1, 0, -1, 0];
-const dy = [0, -1, 0, 1];
 const robDx = [0, -1, 0, 1];
 const robDy = [1, 0, -1, 0];
 
@@ -24,10 +22,14 @@ const exit = [5, 2];
 let canvas, ctx;
 let width, height;
 let initMazeX, initMazeY;
-let robX = -1, robY = 2, robDir = 3;
-let gameStarted = false;
+let state = [{
+  row: -1,
+  col: 2,
+  dir: 3
+}];
 let gameOver = false;
 let instructionsDiv;
+let treasure;
 
 let dashLen, dashOffset, dashSpeed, winX, winY, winI, winTxt;
 
@@ -38,6 +40,8 @@ function startAnimating() {
   height = canvas.height;
   ctx = canvas.getContext('2d');
   instructionsDiv = document.getElementById('instructions');
+  treasure = new Image();
+  treasure.src = './img/pirate_treasure.ico';
 
   initMazeX = (width / 2 - cellSize * n / 2) + cellSize / 2;
   initMazeY = (height / 2 - cellSize * n / 2) + cellSize / 2;
@@ -67,13 +71,21 @@ function game() {
       y += cellSize;
     }
 
-    drawRobot(...indexToScreen(robX, robY), robDir);
-    if ([robX, robY].toString() === exit.toString())
+    let {row, col, dir} = state[state.length - 1];
+    drawRobot(...indexToScreen(row, col), dir);
+
+    let [exitRow, exitCol] = exit;
+    let [exitX, exitY] = indexToScreen(exitRow, exitCol);
+    exitX -= cellSize / 2;
+    exitY -= cellSize / 2;
+    ctx.drawImage(treasure, exitX, exitY, cellSize, cellSize);
+
+    if (row === exitRow && col === exitCol)
       gameOver = true;
 
     requestAnimationFrame(game);
   } else {
-    ctx.font = '50px Comic Sans MS, cursive, TSCu_Comic, sans-serif';
+    ctx.font = `50px 'Architects Daughter', cursive`;
     ctx.lineWidth = 5;
     ctx.lineJoin = 'round';
     ctx.globalAlpha = 2 / 3;
@@ -83,6 +95,7 @@ function game() {
     document.getElementById('btn-left').className += ' disabled';
     document.getElementById('btn-forward').className += ' disabled';
     document.getElementById('btn-right').className += ' disabled';
+    document.getElementById('btn-undo').className += ' disabled';
 
     setTimeout(win, 2000);
   }
@@ -92,7 +105,7 @@ function game() {
   http://stackoverflow.com/questions/29911143/how-can-i-animate-the-drawing-of-text-on-a-web-page
 */
 function win() {
-  ctx.clearRect(winX, 0, 150, 300);
+  ctx.clearRect(winX - 2.5, 0, 120, 300);
   ctx.setLineDash([dashLen - dashOffset, dashOffset - dashSpeed]);
   dashOffset -= dashSpeed;
   ctx.strokeText(winTxt[winI], winX, winY);
@@ -102,7 +115,7 @@ function win() {
   } else {
     ctx.fillText(winTxt[winI], winX, winY);
     dashOffset = dashLen;
-    winX += ctx.measureText(winTxt[winI++]).width + ctx.lineWidth * Math.random();
+    winX += ctx.measureText(winTxt[winI++]).width + ctx.lineWidth;
     ctx.setTransform(1, 0, 0, 1, 0, 3 * Math.random());
     ctx.rotate(Math.random() * 0.005);
     if (winI < winTxt.length)
@@ -137,6 +150,8 @@ function drawCell(x, y, i, j) {
 }
 
 function drawRobot(x, y, dir) {
+  const dx = [1, 0, -1, 0];
+  const dy = [0, -1, 0, 1];
   const radius = 0.75 * cellSize / 2;
 
   // Exterior
@@ -158,25 +173,38 @@ function drawRobot(x, y, dir) {
 }
 
 function rotateLeft() {
-  if (gameStarted) {
-    robDir = (robDir + 1) % 4;
+  if (state.length > 1) {
+    let {row, col, dir} = state[state.length - 1];
+    dir = (dir + 1) % 4;
+    state.push({row, col, dir});
     addInstruction('left');
   }
 }
 
 function advance() {
-  if ((!gameStarted && robDir == 3) || maze[robX][robY][robDir]) {
-    gameStarted = true;
-    robX += robDx[robDir];
-    robY += robDy[robDir];
+  let {row, col, dir} = state[state.length - 1];
+  if (state.length === 1 || maze[row][col][dir]) {
+    let {row, col, dir} = state[state.length - 1];
+    row += robDx[dir];
+    col += robDy[dir];
+    state.push({row, col, dir});
     addInstruction('forward');
   }
 }
 
 function rotateRight() {
-  if (gameStarted) {
-    robDir = (robDir - 1 + 4) % 4;
+  if (state.length > 1) {
+    let {row, col, dir} = state[state.length - 1];
+    dir = (dir - 1 + 4) % 4;
+    state.push({row, col, dir});
     addInstruction('right');
+  }
+}
+
+function undo() {
+  if (state.length > 1) {
+    state.pop();
+    instructionsDiv.removeChild(instructionsDiv.lastChild);
   }
 }
 
