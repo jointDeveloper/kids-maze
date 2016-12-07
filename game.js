@@ -17,19 +17,21 @@ const maze = [
   [[0, 1, 0, 1], [1, 0, 0, 1], [1, 0, 1, 1], [1, 1, 1, 0], [0, 0, 1, 1]],
   [[1, 1, 0, 0], [0, 1, 1, 0], [0, 1, 0, 1], [1, 0, 0, 0], [0, 1, 1, 0]]
 ];
-const exit = [5, 2];
+const exit = [-1, 2];
 
 let canvas, ctx;
 let width, height;
 let initMazeX, initMazeY;
 let state = [{
-  row: -1,
+  row: 5,
   col: 2,
-  dir: 3
+  dir: 1
 }];
 let gameOver = false;
 let instructionsDiv;
 let treasure;
+const robImagesStrings = ['right', 'back', 'left', 'front'];
+let robImages = [];
 
 let dashLen, dashOffset, dashSpeed, winX, winY, winI, winTxt;
 
@@ -40,8 +42,15 @@ function startAnimating() {
   height = canvas.height;
   ctx = canvas.getContext('2d');
   instructionsDiv = document.getElementById('instructions');
+
   treasure = new Image();
   treasure.src = './img/pirate_treasure.ico';
+
+  robImagesStrings.forEach((src) => {
+    let img = new Image();
+    img.src = `./img/${src}.png`;
+    robImages.push(img);
+  });
 
   initMazeX = (width / 2 - cellSize * n / 2) + cellSize / 2;
   initMazeY = (height / 2 - cellSize * n / 2) + cellSize / 2;
@@ -71,14 +80,14 @@ function game() {
       y += cellSize;
     }
 
-    let {row, col, dir} = state[state.length - 1];
-    drawRobot(...indexToScreen(row, col), dir);
-
     let [exitRow, exitCol] = exit;
     let [exitX, exitY] = indexToScreen(exitRow, exitCol);
     exitX -= cellSize / 2;
     exitY -= cellSize / 2;
     ctx.drawImage(treasure, exitX, exitY, cellSize, cellSize);
+
+    let {row, col, dir} = state[state.length - 1];
+    drawRobot(...indexToScreen(row, col), dir);
 
     if (row === exitRow && col === exitCol)
       gameOver = true;
@@ -149,27 +158,71 @@ function drawCell(x, y, i, j) {
   }
 }
 
-function drawRobot(x, y, dir) {
-  const dx = [1, 0, -1, 0];
-  const dy = [0, -1, 0, 1];
-  const radius = 0.75 * cellSize / 2;
+function drawRobot(x, y, dir, useImages = true) {
+  if (useImages) {
+    const size = 0.9 * cellSize;
+    ctx.drawImage(robImages[dir], x - size / 2, y - size / 2, size, size);
+  } else {
+    const radius = 0.75 * cellSize / 2;
+    let out = -5000;
 
-  // Exterior
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, 2 * Math.PI);
-  ctx.fillStyle = 'rgb(212, 0, 114)';
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgb(144, 20, 106)';
-  ctx.stroke();
+    // Antennas
+    ctx.fillStyle = 'black';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1;
+    let dx1 = [out, -0.3, 0, 0.3];
+    let dy1 = [out, -1.4, -1.4, -1.4];
+    let dx2 = [0, 0.3, out, -0.3];
+    let dy2 = [-1.4, -1.4, out, -1.4];
 
-  // Interior
-  ctx.beginPath();
-  ctx.arc(x + dx[dir] * radius / 2, y + dy[dir] * radius / 2, radius * 0.2, 0, 2 * Math.PI);
-  ctx.fillStyle = 'white';
-  ctx.lineWidth = 1;
-  ctx.fill();
-  ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x + dx1[dir] * radius, y + dy1[dir] * radius, radius * 0.15, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(x + dx2[dir] * radius, y + dy2[dir] * radius, radius * 0.15, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    if (dx1[dir] !== out && dy1[dir] !== out) {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + dx1[dir] * radius, y + dy1[dir] * radius);
+    }
+    if (dx2[dir] !== out && dy2[dir] !== out) {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + dx2[dir] * radius, y + dy2[dir] * radius);
+    }
+    ctx.stroke();
+
+    // Exterior
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'black';
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Eyes
+    ctx.fillStyle = 'rgb(212, 0, 114)';
+    dx1 = [out, out, -0.9, 0.3];
+    dy1 = [out, out, 0, 0];
+    dx2 = [0.9, out, out, -0.3];
+    dy2 = [0, out, out, 0];
+
+    ctx.beginPath();
+    ctx.arc(x + dx1[dir] * radius, y + dy1[dir] * radius, radius * 0.2, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(x + dx2[dir] * radius, y + dy2[dir] * radius, radius * 0.2, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+  }
 }
 
 function rotateLeft() {
