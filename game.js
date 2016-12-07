@@ -266,15 +266,15 @@ function addInstruction(inst) {
   switch (inst) {
     case 'right':
       message = 'Girar a la derecha';
-      color = 'red lighten-3';
+      color = 'yellow darken-4 black-text';
       break;
     case 'forward':
       message = 'Avanzar';
-      color = 'blue lighten-3';
+      color = 'green darken-3';
       break;
     case 'left':
       message = 'Girar a la izquierda';
-      color = 'green lighten-3';
+      color = 'blue lighten-3 black-text';
     break;
   }
 
